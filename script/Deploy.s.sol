@@ -8,7 +8,7 @@ contract DeployScript is Script {
     function run() external {
         // Read environment variables
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address yokoa = vm.envAddress("AGENT_ADDRESS");
+        address owner = vm.envAddress("AGENT_OWNER_ADDRESS");
         address licensingModule = vm.envAddress("LICENSING_MODULE");
         address royaltyModule = vm.envAddress("ROYALTY_MODULE");
         
@@ -17,7 +17,7 @@ contract DeployScript is Script {
         
         // Deploy IPDerivativeAgent
         IPDerivativeAgent agent = new IPDerivativeAgent(
-            yokoa,
+            owner,
             licensingModule,
             royaltyModule
         );

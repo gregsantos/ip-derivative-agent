@@ -14,7 +14,7 @@ foundryup
 
 ```bash
 # Extract and navigate
-cd yokoa-agent-deploy
+cd ip-derivative-agent
 
 # Run setup script
 chmod +x setup.sh
@@ -32,7 +32,7 @@ Fill in:
 
 ```bash
 PRIVATE_KEY=your_key_here
-AGENT_ADDRESS=0xYourOwnerAddress
+AGENT_OWNER_ADDRESS=0xYourOwnerAddress
 LICENSING_MODULE=0xLicensingModuleAddress
 ROYALTY_MODULE=0xRoyaltyModuleAddress
 ```
@@ -67,10 +67,10 @@ make deploy-testnet
 cat deployment.txt
 
 # Set as environment variable
-export AGENT_ADDRESS=0xYourDeployedAddress
+export AGENT_OWNER_ADDRESS=0xYourDeployedAddress
 
 # Verify it's working
-cast call $AGENT_ADDRESS "owner()(address)" --rpc-url story-testnet
+cast call $AGENT_OWNER_ADDRESS "owner()(address)" --rpc-url story-testnet
 ```
 
 ## Next Steps
@@ -78,7 +78,7 @@ cast call $AGENT_ADDRESS "owner()(address)" --rpc-url story-testnet
 1. **Add to Whitelist**:
 
    ```bash
-   cast send $AGENT_ADDRESS \
+   cast send $AGENT_OWNER_ADDRESS \
      "addToWhitelist(address,address,address,address,uint256)" \
      $PARENT_IP $CHILD_IP $LICENSEE $TEMPLATE $LICENSE_ID \
      --rpc-url story-testnet --private-key $PRIVATE_KEY

@@ -53,7 +53,7 @@ gas-report: ## Generate gas report
 deploy-testnet: ## Deploy to Story Testnet (Aeneid)
 	@echo "Deploying to Story Testnet..."
 	@if [ -z "$(PRIVATE_KEY)" ]; then echo "Error: PRIVATE_KEY not set in .env"; exit 1; fi
-	@if [ -z "$(AGENT_ADDRESS)" ]; then echo "Error: AGENT_ADDRESS not set in .env"; exit 1; fi
+	@if [ -z "$(AGENT_OWNER_ADDRESS)" ]; then echo "Error: AGENT_OWNER_ADDRESS not set in .env"; exit 1; fi
 	@if [ -z "$(LICENSING_MODULE)" ]; then echo "Error: LICENSING_MODULE not set in .env"; exit 1; fi
 	@if [ -z "$(ROYALTY_MODULE)" ]; then echo "Error: ROYALTY_MODULE not set in .env"; exit 1; fi
 	forge script script/DeployAndVerify.s.sol:DeployAndVerifyScript \
@@ -73,7 +73,7 @@ deploy-mainnet: ## Deploy to Story Mainnet (Odyssey) - USE WITH CAUTION
 	@echo "Press Ctrl+C to cancel, or wait 5 seconds to continue..."
 	@sleep 5
 	@if [ -z "$(PRIVATE_KEY)" ]; then echo "Error: PRIVATE_KEY not set in .env"; exit 1; fi
-	@if [ -z "$(AGENT_ADDRESS)" ]; then echo "Error: AGENT_ADDRESS not set in .env"; exit 1; fi
+	@if [ -z "$(AGENT_OWNER_ADDRESS)" ]; then echo "Error: AGENT_OWNER_ADDRESS not set in .env"; exit 1; fi
 	@if [ -z "$(LICENSING_MODULE)" ]; then echo "Error: LICENSING_MODULE not set in .env"; exit 1; fi
 	@if [ -z "$(ROYALTY_MODULE)" ]; then echo "Error: ROYALTY_MODULE not set in .env"; exit 1; fi
 	forge script script/DeployAndVerify.s.sol:DeployAndVerifyScript \
@@ -95,21 +95,21 @@ verify-testnet: ## Verify contract on Story Testnet
 	forge verify-contract $(CONTRACT_ADDRESS) \
 		src/IPDerivativeAgent.sol:IPDerivativeAgent \
 		--chain story-testnet \
-		--constructor-args $$(cast abi-encode "constructor(address,address,address)" $(AGENT_ADDRESS) $(LICENSING_MODULE) $(ROYALTY_MODULE))
+		--constructor-args $$(cast abi-encode "constructor(address,address,address)" $(AGENT_OWNER_ADDRESS) $(LICENSING_MODULE) $(ROYALTY_MODULE))
 
 verify-mainnet: ## Verify contract on Story Mainnet
 	@if [ -z "$(CONTRACT_ADDRESS)" ]; then echo "Error: CONTRACT_ADDRESS not set"; exit 1; fi
 	forge verify-contract $(CONTRACT_ADDRESS) \
 		src/IPDerivativeAgent.sol:IPDerivativeAgent \
 		--chain story-mainnet \
-		--constructor-args $$(cast abi-encode "constructor(address,address,address)" $(AGENT_ADDRESS) $(LICENSING_MODULE) $(ROYALTY_MODULE))
+		--constructor-args $$(cast abi-encode "constructor(address,address,address)" $(AGENT_OWNER_ADDRESS) $(LICENSING_MODULE) $(ROYALTY_MODULE))
 
 # Utility commands
 
 check-env: ## Check if environment variables are set
 	@echo "Checking environment variables..."
 	@if [ -z "$(PRIVATE_KEY)" ]; then echo "❌ PRIVATE_KEY not set"; else echo "✅ PRIVATE_KEY set"; fi
-	@if [ -z "$(AGENT_ADDRESS)" ]; then echo "❌ AGENT_ADDRESS not set"; else echo "✅ AGENT_ADDRESS: $(AGENT_ADDRESS)"; fi
+	@if [ -z "$(AGENT_OWNER_ADDRESS)" ]; then echo "❌ AGENT_OWNER_ADDRESS not set"; else echo "✅ AGENT_OWNER_ADDRESS: $(AGENT_OWNER_ADDRESS)"; fi
 	@if [ -z "$(LICENSING_MODULE)" ]; then echo "❌ LICENSING_MODULE not set"; else echo "✅ LICENSING_MODULE: $(LICENSING_MODULE)"; fi
 	@if [ -z "$(ROYALTY_MODULE)" ]; then echo "❌ ROYALTY_MODULE not set"; else echo "✅ ROYALTY_MODULE: $(ROYALTY_MODULE)"; fi
 

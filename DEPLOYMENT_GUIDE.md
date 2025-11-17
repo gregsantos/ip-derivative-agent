@@ -17,7 +17,7 @@ Before starting, ensure you have:
 ### 1.1 Extract and Navigate to Project
 
 ```bash
-cd yokoa-agent-deploy
+cd ip-derivative-agent
 ```
 
 ### 1.2 Install Dependencies
@@ -123,7 +123,7 @@ PRIVATE_KEY=abcdef0123456789...
 
 # The address that will own the IPDerivativeAgent
 # This should be YOUR address or a multisig
-AGENT_ADDRESS=0x1234567890123456789012345678901234567890
+AGENT_OWNER_ADDRESS=0x1234567890123456789012345678901234567890
 
 # Story Protocol addresses from Step 3.1
 LICENSING_MODULE=0x[from_story_docs]
@@ -143,7 +143,7 @@ make check-env
 
 ```
 ✅ PRIVATE_KEY set
-✅ AGENT_ADDRESS: 0x1234...
+✅ AGENT_OWNER_ADDRESS: 0x1234...
 ✅ LICENSING_MODULE: 0x5678...
 ✅ ROYALTY_MODULE: 0x9abc...
 ```
@@ -161,7 +161,7 @@ make deploy-testnet-dry
 **Review the output carefully**:
 
 - Check deployer address is correct
-- Verify Yokoa owner address
+- Verify Agent owner address
 - Confirm LicensingModule address
 - Confirm RoyaltyModule address
 - Check estimated gas costs
@@ -177,7 +177,7 @@ make deploy-testnet
 **This will**:
 
 1. Deploy IPDerivativeAgent contract
-2. Transfer ownership to AGENT_ADDRESS
+2. Transfer ownership to AGENT_OWNER_ADDRESS
 3. Verify contract on StoryScan
 4. Save deployment info to `deployment.txt`
 
@@ -188,7 +188,7 @@ make deploy-testnet
 Deployment Configuration
 ========================================
 Deployer: 0xYourAddress...
-Yokoa Owner: 0xYokoaAddress...
+Agent Owner: 0xAgentAddress...
 LicensingModule: 0xLicensingModule...
 RoyaltyModule: 0xRoyaltyModule...
 ========================================
@@ -199,8 +199,8 @@ Starting Broadcast...
 ========================================
 Deployment Successful!
 ========================================
-IPDerivativeAgent: 0xNewAgentAddress123...
-Owner: 0xYokoaAddress...
+IPDerivativeAgent: 0xNewAgentAddress...
+Agent Owner: 0xAgentAddress...
 Paused: false
 ========================================
 
@@ -211,26 +211,26 @@ Deployment info saved to deployment.txt
 
 ```bash
 # Save to environment variable
-export AGENT_ADDRESS=0xNewAgentAddress123...
+export AGENT_OWNER_ADDRESS=0xNewAgentAddress...
 
 # Or add to .env file
-echo "AGENT_ADDRESS=0xNewAgentAddress123..." >> .env
+echo "AGENT_OWNER_ADDRESS=0xNewAgentAddress123..." >> .env
 ```
 
 ### 4.4 Verify Deployment
 
 ```bash
 # Check owner
-cast call $AGENT_ADDRESS "owner()(address)" --rpc-url story-testnet
+cast call $AGENT_OWNER_ADDRESS "owner()(address)" --rpc-url story-testnet
 
 # Check licensing module
-cast call $AGENT_ADDRESS "LICENSING_MODULE()(address)" --rpc-url story-testnet
+cast call $AGENT_OWNER_ADDRESS "LICENSING_MODULE()(address)" --rpc-url story-testnet
 
 # Check royalty module
-cast call $AGENT_ADDRESS "ROYALTY_MODULE()(address)" --rpc-url story-testnet
+cast call $AGENT_OWNER_ADDRESS "ROYALTY_MODULE()(address)" --rpc-url story-testnet
 
 # Check if paused
-cast call $AGENT_ADDRESS "paused()(bool)" --rpc-url story-testnet
+cast call $AGENT_OWNER_ADDRESS "paused()(bool)" --rpc-url story-testnet
 ```
 
 ## Step 5: Test Contract on Testnet
@@ -246,7 +246,7 @@ export TEST_TEMPLATE=0xLicenseTemplateAddress...
 export TEST_LICENSE_ID=1
 
 # Add to whitelist (requires owner key)
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "addToWhitelist(address,address,address,address,uint256)" \
   $TEST_PARENT \
   $TEST_CHILD \
@@ -260,7 +260,7 @@ cast send $AGENT_ADDRESS \
 ### 5.2 Verify Whitelist Entry
 
 ```bash
-cast call $AGENT_ADDRESS \
+cast call $AGENT_OWNER_ADDRESS \
   "isWhitelisted(address,address,address,uint256,address)(bool)" \
   $TEST_PARENT \
   $TEST_CHILD \
@@ -291,14 +291,14 @@ cast call $LICENSING_MODULE \
 # 2. Approve fee token (if fee > 0)
 cast send $FEE_TOKEN \
   "approve(address,uint256)" \
-  $AGENT_ADDRESS \
+  $AGENT_OWNER_ADDRESS \
   $FEE_AMOUNT \
   --rpc-url story-testnet \
   --private-key $LICENSEE_KEY
 
 # 3. Register derivative
-cast send $AGENT_ADDRESS \
-  "registerDerivativeViaYokoa(address,address,uint256,address,uint256)" \
+cast send $AGENT_OWNER_ADDRESS \
+  "registerDerivativeViaAgent(address,address,uint256,address,uint256)" \
   $TEST_CHILD \
   $TEST_PARENT \
   $TEST_LICENSE_ID \
@@ -314,7 +314,7 @@ cast send $AGENT_ADDRESS \
 
 - This will use real tokens
 - Double-check ALL addresses
-- Consider using a multisig for AGENT_ADDRESS
+- Consider using a multisig for AGENT_OWNER_ADDRESS
 - Have a rollback/emergency plan
 - Notify your team
 
@@ -362,14 +362,14 @@ Press Ctrl+C within 5 seconds to cancel.
 
 ```bash
 # Check contract on StoryScan
-# Visit: https://storyscan.xyz/address/$AGENT_ADDRESS
+# Visit: https://storyscan.xyz/address/$AGENT_OWNER_ADDRESS
 
 # Verify owner
-cast call $AGENT_ADDRESS "owner()(address)" --rpc-url story-mainnet
+cast call $AGENT_OWNER_ADDRESS "owner()(address)" --rpc-url story-mainnet
 
 # Verify addresses
-cast call $AGENT_ADDRESS "LICENSING_MODULE()(address)" --rpc-url story-mainnet
-cast call $AGENT_ADDRESS "ROYALTY_MODULE()(address)" --rpc-url story-mainnet
+cast call $AGENT_OWNER_ADDRESS "LICENSING_MODULE()(address)" --rpc-url story-mainnet
+cast call $AGENT_OWNER_ADDRESS "ROYALTY_MODULE()(address)" --rpc-url story-mainnet
 ```
 
 ## Step 7: Post-Deployment
@@ -422,10 +422,10 @@ Securely backup:
 ```bash
 # Manual verification
 forge verify-contract \
-  $AGENT_ADDRESS \
+  $AGENT_OWNER_ADDRESS \
   src/IPDerivativeAgent.sol:IPDerivativeAgent \
   --chain story-testnet \
-  --constructor-args $(cast abi-encode "constructor(address,address,address)" $AGENT_ADDRESS $LICENSING_MODULE $ROYALTY_MODULE)
+  --constructor-args $(cast abi-encode "constructor(address,address,address)" $AGENT_OWNER_ADDRESS $LICENSING_MODULE $ROYALTY_MODULE)
 ```
 
 ### Issue: "Insufficient funds for gas"
@@ -463,7 +463,7 @@ Then retry deployment with correct nonce.
 1. **Pause immediately**:
 
 ```bash
-cast send $AGENT_ADDRESS "pause()" \
+cast send $AGENT_OWNER_ADDRESS "pause()" \
   --rpc-url [network] \
   --private-key $OWNER_KEY
 ```
@@ -478,7 +478,7 @@ cast send $AGENT_ADDRESS "pause()" \
 
 ```bash
 # While paused, owner can withdraw
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "emergencyWithdraw(address,address,uint256)" \
   $TOKEN_ADDRESS \
   $SAFE_ADDRESS \
@@ -495,7 +495,7 @@ cast send $AGENT_ADDRESS \
 ### If Owner Key is Lost
 
 - If using a single owner: Funds and control are **permanently lost**
-- This is why using a multisig for AGENT_ADDRESS is recommended
+- This is why using a multisig for AGENT_OWNER_ADDRESS is recommended
 - No recovery mechanism exists in the contract
 
 ## Best Practices Checklist

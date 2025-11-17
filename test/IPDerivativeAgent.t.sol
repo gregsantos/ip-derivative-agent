@@ -11,7 +11,7 @@ contract IPDerivativeAgentTest is Test {
     MockLicensingModule public licensingModule;
     MockERC20 public token;
     
-    address public yokoa = address(0x1);
+    address public owner = address(0x1);
     address public royaltyModule = address(0x2);
     address public parentIp = address(0x3);
     address public childIp = address(0x4);
@@ -44,8 +44,8 @@ contract IPDerivativeAgentTest is Test {
         token = new MockERC20("Mock Token", "MTK");
         
         // Deploy agent
-        vm.prank(yokoa);
-        agent = new IPDerivativeAgent(yokoa, address(licensingModule), royaltyModule);
+        vm.prank(owner);
+        agent = new IPDerivativeAgent(owner, address(licensingModule), royaltyModule);
         
         // Mint tokens to licensee
         token.mint(licensee, 1000 ether);
@@ -56,23 +56,23 @@ contract IPDerivativeAgentTest is Test {
     function test_Constructor_Success() public view {
         assertEq(address(agent.LICENSING_MODULE()), address(licensingModule));
         assertEq(agent.ROYALTY_MODULE(), royaltyModule);
-        assertEq(agent.owner(), yokoa);
+        assertEq(agent.owner(), owner);
     }
     
     function test_Constructor_RevertIf_ZeroLicensingModule() public {
         vm.expectRevert(IPDerivativeAgent_ZeroAddress.selector);
-        new IPDerivativeAgent(yokoa, address(0), royaltyModule);
+        new IPDerivativeAgent(owner, address(0), royaltyModule);
     }
     
     function test_Constructor_RevertIf_ZeroRoyaltyModule() public {
         vm.expectRevert(IPDerivativeAgent_ZeroAddress.selector);
-        new IPDerivativeAgent(yokoa, address(licensingModule), address(0));
+        new IPDerivativeAgent(owner, address(licensingModule), address(0));
     }
     
     // ========== Whitelist Management Tests ==========
     
     function test_AddToWhitelist_Success() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         vm.expectEmit(true, true, true, true);
         emit WhitelistedAdded(parentIp, childIp, licenseTemplate, licenseId, licensee);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
@@ -87,13 +87,13 @@ contract IPDerivativeAgentTest is Test {
     }
     
     function test_AddToWhitelist_RevertIf_ZeroParentIp() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
         agent.addToWhitelist(address(0), childIp, licensee, licenseTemplate, licenseId);
     }
     
     function test_AddToWhitelist_RevertIf_AlreadyWhitelisted() public {
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
         vm.expectRevert(
@@ -111,7 +111,7 @@ contract IPDerivativeAgentTest is Test {
     }
     
     function test_AddWildcardToWhitelist_Success() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addWildcardToWhitelist(parentIp, childIp, licenseTemplate, licenseId);
         
         assertTrue(agent.isWhitelisted(parentIp, childIp, licenseTemplate, licenseId, address(0x999)));
@@ -119,7 +119,7 @@ contract IPDerivativeAgentTest is Test {
     }
     
     function test_RemoveFromWhitelist_Success() public {
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         agent.removeFromWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         vm.stopPrank();
@@ -145,7 +145,7 @@ contract IPDerivativeAgentTest is Test {
         licenseIds[0] = 1;
         licenseIds[1] = 2;
         
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseIds);
         
         assertTrue(agent.isWhitelisted(parentIps[0], childIps[0], licenseTemplates[0], licenseIds[0], licensees[0]));
@@ -159,7 +159,7 @@ contract IPDerivativeAgentTest is Test {
         address[] memory licenseTemplates = new address[](2);
         uint256[] memory licenseIds = new uint256[](2);
         
-        vm.prank(yokoa);
+        vm.prank(owner);
         vm.expectRevert(IPDerivativeAgent_BatchLengthMismatch.selector);
         agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseIds);
     }
@@ -171,7 +171,7 @@ contract IPDerivativeAgentTest is Test {
         licensingModule.setMintingFee(address(token), fee);
         
         // Whitelist the licensee
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
         // Approve agent to spend tokens
@@ -191,7 +191,7 @@ contract IPDerivativeAgentTest is Test {
             fee,
             block.timestamp
         );
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, 0);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, 0);
         
         // Check that tokens were transferred
         assertEq(token.balanceOf(licensee), 1000 ether - fee);
@@ -201,12 +201,12 @@ contract IPDerivativeAgentTest is Test {
         licensingModule.setMintingFee(address(0), 0);
         
         // Whitelist the licensee
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
         // Register derivative
         vm.prank(licensee);
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, 0);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, 0);
         
         // Check that no tokens were transferred
         assertEq(token.balanceOf(licensee), 1000 ether);
@@ -217,7 +217,7 @@ contract IPDerivativeAgentTest is Test {
         licensingModule.setMintingFee(address(token), fee);
         
         // Whitelist with wildcard
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addWildcardToWhitelist(parentIp, childIp, licenseTemplate, licenseId);
         
         // Any address can register now
@@ -226,7 +226,7 @@ contract IPDerivativeAgentTest is Test {
         
         vm.startPrank(anyAddress);
         token.approve(address(agent), fee);
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, 0);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, 0);
         vm.stopPrank();
         
         assertEq(token.balanceOf(anyAddress), 100 ether - fee);
@@ -244,7 +244,7 @@ contract IPDerivativeAgentTest is Test {
                 licensee
             )
         );
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, 0);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, 0);
     }
     
     function test_RegisterDerivative_RevertIf_FeeTooHigh() public {
@@ -252,7 +252,7 @@ contract IPDerivativeAgentTest is Test {
         uint256 maxFee = 5 ether;
         licensingModule.setMintingFee(address(token), fee);
         
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
         vm.prank(licensee);
@@ -262,31 +262,31 @@ contract IPDerivativeAgentTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IPDerivativeAgent_FeeTooHigh.selector, fee, maxFee)
         );
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, maxFee);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, maxFee);
     }
     
     function test_RegisterDerivative_RevertIf_Paused() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.pause();
         
         vm.prank(licensee);
         vm.expectRevert("Pausable: paused");
-        agent.registerDerivativeViaYokoa(childIp, parentIp, licenseId, licenseTemplate, 0);
+        agent.registerDerivativeViaAgent(childIp, parentIp, licenseId, licenseTemplate, 0);
     }
     
     // ========== Pausable Tests ==========
     
     function test_Pause_Success() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.pause();
         assertTrue(agent.paused());
     }
     
     function test_Unpause_Success() public {
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.pause();
         agent.unpause();
         vm.stopPrank();
@@ -305,12 +305,12 @@ contract IPDerivativeAgentTest is Test {
         // Send tokens to agent
         token.mint(address(agent), 100 ether);
         
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.pause();
-        agent.emergencyWithdraw(address(token), yokoa, 100 ether);
+        agent.emergencyWithdraw(address(token), owner, 100 ether);
         vm.stopPrank();
         
-        assertEq(token.balanceOf(yokoa), 100 ether);
+        assertEq(token.balanceOf(owner), 100 ether);
         assertEq(token.balanceOf(address(agent)), 0);
     }
     
@@ -318,29 +318,29 @@ contract IPDerivativeAgentTest is Test {
         // Send native tokens to agent
         vm.deal(address(agent), 10 ether);
         
-        uint256 yokoaBalanceBefore = yokoa.balance;
+        uint256 ownerBalanceBefore = owner.balance;
         
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.pause();
-        agent.emergencyWithdraw(address(0), yokoa, 10 ether);
+        agent.emergencyWithdraw(address(0), owner, 10 ether);
         vm.stopPrank();
         
-        assertEq(yokoa.balance, yokoaBalanceBefore + 10 ether);
+        assertEq(owner.balance, ownerBalanceBefore + 10 ether);
         assertEq(address(agent).balance, 0);
     }
     
     function test_EmergencyWithdraw_RevertIf_NotPaused() public {
         token.mint(address(agent), 100 ether);
         
-        vm.prank(yokoa);
+        vm.prank(owner);
         vm.expectRevert("Pausable: not paused");
-        agent.emergencyWithdraw(address(token), yokoa, 100 ether);
+        agent.emergencyWithdraw(address(token), owner, 100 ether);
     }
     
     function test_EmergencyWithdraw_RevertIf_ToIsContract() public {
         token.mint(address(agent), 100 ether);
         
-        vm.startPrank(yokoa);
+        vm.startPrank(owner);
         agent.pause();
         vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
         agent.emergencyWithdraw(address(token), address(agent), 100 ether);
@@ -358,7 +358,7 @@ contract IPDerivativeAgentTest is Test {
     }
     
     function test_GetWhitelistStatusByKey() public {
-        vm.prank(yokoa);
+        vm.prank(owner);
         agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseId);
         
         bytes32 key = agent.getWhitelistKey(parentIp, childIp, licenseTemplate, licenseId, licensee);

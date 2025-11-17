@@ -8,7 +8,7 @@ contract DeployAndVerifyScript is Script {
     function run() external {
         // Read environment variables
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address yokoa = vm.envAddress("AGENT_ADDRESS");
+        address owner = vm.envAddress("AGENT_OWNER_ADDRESS");
         address licensingModule = vm.envAddress("LICENSING_MODULE");
         address royaltyModule = vm.envAddress("ROYALTY_MODULE");
         
@@ -18,13 +18,13 @@ contract DeployAndVerifyScript is Script {
         console.log("Deployment Configuration");
         console.log("========================================");
         console.log("Deployer:", deployer);
-        console.log("Yokoa Owner:", yokoa);
+        console.log("Agent Owner:", owner);
         console.log("LicensingModule:", licensingModule);
         console.log("RoyaltyModule:", royaltyModule);
         console.log("========================================");
         
         // Validate addresses
-        require(yokoa != address(0), "AGENT_ADDRESS not set");
+        require(owner != address(0), "AGENT_OWNER_ADDRESS not set");
         require(licensingModule != address(0), "LICENSING_MODULE not set");
         require(royaltyModule != address(0), "ROYALTY_MODULE not set");
         
@@ -33,7 +33,7 @@ contract DeployAndVerifyScript is Script {
         
         // Deploy IPDerivativeAgent
         IPDerivativeAgent agent = new IPDerivativeAgent(
-            yokoa,
+            owner,
             licensingModule,
             royaltyModule
         );

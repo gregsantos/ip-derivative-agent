@@ -37,7 +37,7 @@ A production-ready smart contract for delegated derivative registration on Story
 │     Owner)      │
 └────────┬────────┘
          │ 1. Approve tokens
-         │ 2. Call registerDerivativeViaYokoa
+         │ 2. Call registerDerivativeViaAgent
          ▼
 ┌─────────────────────────┐
 │    IPDerivativeAgent    │
@@ -96,12 +96,12 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 # If you have the zip file
-unzip yokoa-agent-deploy.zip
-cd yokoa-agent-deploy
+unzip ip-derivative-agent.zip
+cd ip-derivative-agent
 
 # Or if cloning from a repo
 git clone <your-repo-url>
-cd yokoa-agent-deploy
+cd ip-derivative-agent
 ```
 
 ### 2. Install Dependencies
@@ -152,8 +152,8 @@ Open `.env` in your favorite editor and configure:
 # Your deployer wallet private key (without 0x prefix)
 PRIVATE_KEY=your_private_key_here
 
-# Yokoa owner address (will control the agent)
-AGENT_ADDRESS=0x1234567890123456789012345678901234567890
+# Owner address (will control the agent)
+AGENT_OWNER_ADDRESS=0x1234567890123456789012345678901234567890
 
 # Story Protocol contract addresses
 # For Testnet (Aeneid):
@@ -184,7 +184,7 @@ Expected output:
 
 ```
 ✅ PRIVATE_KEY set
-✅ AGENT_ADDRESS: 0x1234...
+✅ AGENT_OWNER_ADDRESS: 0x1234...
 ✅ LICENSING_MODULE: 0x5678...
 ✅ ROYALTY_MODULE: 0x9abc...
 ```
@@ -278,7 +278,7 @@ The deployment will:
 Deployment Configuration
 ========================================
 Deployer: 0xYourAddress...
-Yokoa Owner: 0xYokoaAddress...
+Agent Owner: 0xAgentAddress...
 LicensingModule: 0xLicensingModule...
 RoyaltyModule: 0xRoyaltyModule...
 ========================================
@@ -289,7 +289,7 @@ RoyaltyModule: 0xRoyaltyModule...
 Deployment Successful!
 ========================================
 IPDerivativeAgent: 0xNewAgentAddress...
-Owner: 0xYokoaAddress...
+Agent Owner: 0xAgentAddress...
 Paused: false
 ========================================
 
@@ -346,7 +346,7 @@ forge script script/DeployAndVerify.s.sol:DeployAndVerifyScript \
 Save your deployment address:
 
 ```bash
-export AGENT_ADDRESS=0x[your_deployed_agent_address]
+export AGENT_OWNER_ADDRESS=0x[your_deployed_AGENT_OWNER_ADDRESS]
 ```
 
 ### Owner Operations (Using Cast)
@@ -354,7 +354,7 @@ export AGENT_ADDRESS=0x[your_deployed_agent_address]
 #### 1. Add to Whitelist
 
 ```bash
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "addToWhitelist(address,address,address,address,uint256)" \
   $PARENT_IP \
   $CHILD_IP \
@@ -368,7 +368,7 @@ cast send $AGENT_ADDRESS \
 #### 2. Add Wildcard Entry (Any Caller Allowed)
 
 ```bash
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "addWildcardToWhitelist(address,address,address,uint256)" \
   $PARENT_IP \
   $CHILD_IP \
@@ -381,7 +381,7 @@ cast send $AGENT_ADDRESS \
 #### 3. Check Whitelist Status
 
 ```bash
-cast call $AGENT_ADDRESS \
+cast call $AGENT_OWNER_ADDRESS \
   "isWhitelisted(address,address,address,uint256,address)(bool)" \
   $PARENT_IP \
   $CHILD_IP \
@@ -394,7 +394,7 @@ cast call $AGENT_ADDRESS \
 #### 4. Pause Contract
 
 ```bash
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "pause()" \
   --rpc-url https://rpc.testnet.story.foundation \
   --private-key $PRIVATE_KEY
@@ -404,7 +404,7 @@ cast send $AGENT_ADDRESS \
 
 ```bash
 # Withdraw ERC20 tokens
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "emergencyWithdraw(address,address,uint256)" \
   $TOKEN_ADDRESS \
   $RECIPIENT \
@@ -413,7 +413,7 @@ cast send $AGENT_ADDRESS \
   --private-key $PRIVATE_KEY
 
 # Withdraw native tokens (use address(0) for token)
-cast send $AGENT_ADDRESS \
+cast send $AGENT_OWNER_ADDRESS \
   "emergencyWithdraw(address,address,uint256)" \
   0x0000000000000000000000000000000000000000 \
   $RECIPIENT \
@@ -443,7 +443,7 @@ cast call $LICENSING_MODULE \
 # Then approve the agent
 cast send $FEE_TOKEN \
   "approve(address,uint256)" \
-  $AGENT_ADDRESS \
+  $AGENT_OWNER_ADDRESS \
   $FEE_AMOUNT \
   --rpc-url https://rpc.testnet.story.foundation \
   --private-key $LICENSEE_PRIVATE_KEY
@@ -452,8 +452,8 @@ cast send $FEE_TOKEN \
 #### 2. Register Derivative
 
 ```bash
-cast send $AGENT_ADDRESS \
-  "registerDerivativeViaYokoa(address,address,uint256,address,uint256)" \
+cast send $AGENT_OWNER_ADDRESS \
+  "registerDerivativeViaAgent(address,address,uint256,address,uint256)" \
   $CHILD_IP \
   $PARENT_IP \
   $LICENSE_ID \
@@ -566,7 +566,7 @@ Error: ERC20: insufficient allowance
 
 ```bash
 # Approve the agent to spend your tokens first
-cast send $TOKEN_ADDRESS "approve(address,uint256)" $AGENT_ADDRESS $AMOUNT ...
+cast send $TOKEN_ADDRESS "approve(address,uint256)" $AGENT_OWNER_ADDRESS $AMOUNT ...
 ```
 
 ### Getting Help

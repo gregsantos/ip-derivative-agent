@@ -2,14 +2,14 @@
 pragma solidity 0.8.26;
 
 /// @title IPDerivativeAgent
-/// @notice Yokoa (owner) manages a whitelist of (parentIp, childIp, licenseTemplate, licenseId, licensee).
+/// @notice Agent (owner) manages a whitelist of (parentIp, childIp, licenseTemplate, licenseId, licensee).
 /// Whitelisted licensees may delegate the agent to register derivatives on behalf of the
 /// derivative owner. The minting fee is paid in an ERC-20 token. The agent pulls the token
 /// from the licensee, approves the RoyaltyModule to pull it from the agent, and then calls
 /// LicensingModule.registerDerivative(...). The agent exposes no regular withdraw function;
 /// an emergency withdrawal (ERC20/native) is available only to the owner while paused.
 ///
-/// @dev CRITICAL: Licensees must approve this contract to spend the minting fee token before calling registerDerivativeViaYokoa.
+/// @dev CRITICAL: Licensees must approve this contract to spend the minting fee token before calling registerDerivativeViaAgent.
 /// @dev Wildcard Pattern: Setting licensee = address(0) in whitelist allows ANY caller to register that specific (parent, child, template, license) combo.
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -120,16 +120,16 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     event EmergencyWithdraw(address indexed token, address indexed to, uint256 amount, uint256 timestamp);
 
     /// @notice Constructor
-    /// @param yokoa Address to transfer ownership to (if non-zero). Otherwise deployer remains owner.
+    /// @param owner Address to transfer ownership to (if non-zero). Otherwise deployer remains owner.
     /// @param _licensingModule LicensingModule address (must be non-zero)
     /// @param _royaltyModule RoyaltyModule address (must be non-zero)
-    constructor(address yokoa, address _licensingModule, address _royaltyModule) {
+    constructor(address owner, address _licensingModule, address _royaltyModule) {
         if (_licensingModule == address(0) || _royaltyModule == address(0)) revert IPDerivativeAgent_ZeroAddress();
         LICENSING_MODULE = ILicensingModule(_licensingModule);
         ROYALTY_MODULE = _royaltyModule;
 
-        if (yokoa != address(0) && yokoa != msg.sender) {
-            transferOwnership(yokoa);
+        if (owner != address(0) && owner != msg.sender) {
+            transferOwnership(owner);
         }
     }
 
@@ -363,7 +363,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// Pausable Controls
     /// -----------------------------------------------------------------------
 
-    /// @notice Pause the contract (blocks registerDerivativeViaYokoa calls). Only callable by owner.
+    /// @notice Pause the contract (blocks registerDerivativeViaAgent calls). Only callable by owner.
     function pause() external onlyOwner {
         _pause();
     }
@@ -393,7 +393,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param licenseId The license terms ID in the license template
     /// @param licenseTemplate The license template address (must be non-zero)
     /// @param maxMintingFee Maximum minting fee willing to pay. Use 0 for no limit (per LicensingModule conventions).
-    function registerDerivativeViaYokoa(
+    function registerDerivativeViaAgent(
         address childIpId,
         address parentIpId,
         uint256 licenseId,

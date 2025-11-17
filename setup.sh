@@ -59,7 +59,7 @@ if [ ! -f .env ]; then
     echo ""
     echo "⚠️  IMPORTANT: Edit .env file and add:"
     echo "   - Your PRIVATE_KEY"
-    echo "   - AGENT_ADDRESS"
+    echo "   - AGENT_OWNER_ADDRESS"
     echo "   - LICENSING_MODULE address"
     echo "   - ROYALTY_MODULE address"
     echo ""
