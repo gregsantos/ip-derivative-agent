@@ -381,6 +381,15 @@ contract IPDerivativeAgentTest is Test {
         agent.registerDerivativeViaAgent(childIp, parentIp, licenseTermsId, licenseTemplate, 0);
     }
     
+    function test_RegisterDerivative_RevertIf_ZeroLicenseTermsId() public {
+        vm.prank(owner);
+        agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseTermsId);
+        
+        vm.prank(licensee);
+        vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
+        agent.registerDerivativeViaAgent(childIp, parentIp, 0, licenseTemplate, 0);
+    }
+    
     // ========== Pausable Tests ==========
     
     function test_Pause_Success() public {

@@ -363,7 +363,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         address licenseTemplate,
         uint256 maxMintingFee
     ) external nonReentrant whenNotPaused {
-        if (childIpId == address(0) || parentIpId == address(0) || licenseTemplate == address(0)) {
+        if (childIpId == address(0) || parentIpId == address(0) || licenseTemplate == address(0) || licenseTermsId == 0) {
             revert IPDerivativeAgent_InvalidParams();
         }
 
