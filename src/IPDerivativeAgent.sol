@@ -111,12 +111,6 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         address licensee
     );
 
-    /// @notice Emitted after batch whitelist addition
-    event BatchWhitelistAdded(uint256 count);
-
-    /// @notice Emitted after batch whitelist removal
-    event BatchWhitelistRemoved(uint256 count);
-
     /// @notice Emitted on successful derivative registration via agent
     event DerivativeRegistered(
         address indexed caller,
@@ -218,6 +212,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
 
     /// @notice Batch add whitelist entries. Reverts if any entry is invalid or already exists.
     /// @dev Uses WhitelistEntry struct to ensure parameter grouping is correct. Reuses addToWhitelist for each entry.
+    ///      Each successful addition emits a WhitelistedAdded event.
     /// @param entries Array of WhitelistEntry structs containing whitelist parameters
     function addToWhitelistBatch(WhitelistEntry[] calldata entries) external onlyOwner {
         uint256 n = entries.length;
@@ -232,11 +227,11 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
             );
             unchecked { ++i; }
         }
-        emit BatchWhitelistAdded(n);
     }
 
     /// @notice Batch remove whitelist entries. Reverts if any entry doesn't exist.
     /// @dev Uses WhitelistEntry struct to ensure parameter grouping is correct. Reuses removeFromWhitelist for each entry.
+    ///      Each successful removal emits a WhitelistedRemoved event.
     /// @param entries Array of WhitelistEntry structs containing whitelist parameters
     function removeFromWhitelistBatch(WhitelistEntry[] calldata entries) external onlyOwner {
         uint256 n = entries.length;
@@ -251,7 +246,6 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
             );
             unchecked { ++i; }
         }
-        emit BatchWhitelistRemoved(n);
     }
 
     /// @notice Convenience function to add a wildcard whitelist entry (allows any caller)
