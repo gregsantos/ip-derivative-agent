@@ -282,7 +282,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param licenseTemplate License template address
     /// @param licenseTermsId License terms ID (must be non-zero)
     /// @param licensee Licensee address to check
-    /// @return True if exact licensee is whitelisted OR wildcard (address(0)) is whitelisted
+    /// @return True if wildcard (address(0)) is whitelisted OR exact licensee is whitelisted
     function isWhitelisted(
         address parentIpId,
         address childIpId,
@@ -290,10 +290,12 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         uint256 licenseTermsId,
         address licensee
     ) public view returns (bool) {
-        bytes32 keyExact = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
-        if (_whitelist[keyExact]) return true;
+        // Check wildcard first (more general case)
         bytes32 keyWildcard = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, address(0));
-        return _whitelist[keyWildcard];
+        if (_whitelist[keyWildcard]) return true;
+        // Check specific licensee
+        bytes32 keyExact = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
+        return _whitelist[keyExact];
     }
 
     /// @notice Helper function to compute the whitelist key for off-chain use
