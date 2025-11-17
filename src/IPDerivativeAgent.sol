@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 /// @title IPDerivativeAgent
-/// @notice Agent (owner) manages a whitelist of (parentIp, childIp, licenseTemplate, licenseId, licensee).
+/// @notice Agent (owner) manages a whitelist of (parentIp, childIp, licenseTemplate, licenseTermsId, licensee).
 /// Whitelisted licensees may delegate the agent to register derivatives on behalf of the
 /// derivative owner. The minting fee is paid in an ERC-20 token. The agent pulls the token
 /// from the licensee, approves the RoyaltyModule to pull it from the agent, and then calls
@@ -60,8 +60,8 @@ interface ILicensingModule {
 
 /// @dev Custom errors for gas-efficient reverts
 error IPDerivativeAgent_ZeroAddress();
-error IPDerivativeAgent_AlreadyWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseId, address licensee);
-error IPDerivativeAgent_NotWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseId, address licensee);
+error IPDerivativeAgent_AlreadyWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseTermsId, address licensee);
+error IPDerivativeAgent_NotWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseTermsId, address licensee);
 error IPDerivativeAgent_InvalidParams();
 error IPDerivativeAgent_BatchLengthMismatch();
 error IPDerivativeAgent_FeeTooHigh(uint256 required, uint256 maxAllowed);
@@ -76,7 +76,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @notice Royalty module address (used for token allowance during fee payment)
     address public immutable ROYALTY_MODULE;
 
-    /// @notice Whitelist mapping keyed by keccak256(parentIpId, childIpId, licenseTemplate, licenseId, licensee)
+    /// @notice Whitelist mapping keyed by keccak256(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee)
     /// @dev Use address(0) as licensee for wildcard (allows any caller)
     mapping(bytes32 => bool) private _whitelist;
 
@@ -85,7 +85,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         address indexed parentIpId,
         address indexed childIpId,
         address indexed licenseTemplate,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licensee
     );
 
@@ -94,7 +94,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         address indexed parentIpId,
         address indexed childIpId,
         address indexed licenseTemplate,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licensee
     );
 
@@ -109,7 +109,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         address indexed caller,
         address indexed childIpId,
         address indexed parentIpId,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licenseTemplate,
         address currencyToken,
         uint256 tokenAmount,
@@ -120,17 +120,15 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     event EmergencyWithdraw(address indexed token, address indexed to, uint256 amount, uint256 timestamp);
 
     /// @notice Constructor
-    /// @param owner Address to transfer ownership to (if non-zero). Otherwise deployer remains owner.
+    /// @param owner Address to transfer ownership to (must be non-zero)
     /// @param _licensingModule LicensingModule address (must be non-zero)
     /// @param _royaltyModule RoyaltyModule address (must be non-zero)
     constructor(address owner, address _licensingModule, address _royaltyModule) {
-        if (_licensingModule == address(0) || _royaltyModule == address(0)) revert IPDerivativeAgent_ZeroAddress();
+        if (owner == address(0) || _licensingModule == address(0) || _royaltyModule == address(0)) {
+            revert IPDerivativeAgent_ZeroAddress();
+        }
         LICENSING_MODULE = ILicensingModule(_licensingModule);
         ROYALTY_MODULE = _royaltyModule;
-
-        if (owner != address(0) && owner != msg.sender) {
-            transferOwnership(owner);
-        }
     }
 
     /// -----------------------------------------------------------------------
@@ -141,17 +139,17 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param parentIpId Parent IP address
     /// @param childIpId Child/derivative IP address
     /// @param licenseTemplate License template address
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     /// @param licensee Specific licensee address (or address(0) for wildcard)
     /// @return Keccak256 hash of the packed parameters
     function _whitelistKey(
         address parentIpId,
         address childIpId,
         address licenseTemplate,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licensee
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(parentIpId, childIpId, licenseTemplate, licenseId, licensee));
+        return keccak256(abi.encodePacked(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee));
     }
 
     /// @notice Add a single whitelist entry. Callable by owner and internally.
@@ -160,24 +158,24 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param childIpId Child/derivative IP address (must be non-zero)
     /// @param licensee Specific licensee address, or address(0) for wildcard
     /// @param licenseTemplate License template address (must be non-zero)
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID (must be non-zero)
     function addToWhitelist(
         address parentIpId,
         address childIpId,
         address licensee,
         address licenseTemplate,
-        uint256 licenseId
+        uint256 licenseTermsId
     ) public onlyOwner {
-        if (parentIpId == address(0) || childIpId == address(0) || licenseTemplate == address(0)) {
+        if (parentIpId == address(0) || childIpId == address(0) || licenseTemplate == address(0) || licenseTermsId == 0) {
             revert IPDerivativeAgent_InvalidParams();
         }
 
-        bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
         if (_whitelist[key]) {
-            revert IPDerivativeAgent_AlreadyWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            revert IPDerivativeAgent_AlreadyWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
         }
         _whitelist[key] = true;
-        emit WhitelistedAdded(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        emit WhitelistedAdded(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
     }
 
     /// @notice Remove a single whitelist entry. Callable by owner and internally.
@@ -185,24 +183,24 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param childIpId Child/derivative IP address (must be non-zero)
     /// @param licensee Specific licensee address (or address(0) if removing wildcard)
     /// @param licenseTemplate License template address (must be non-zero)
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     function removeFromWhitelist(
         address parentIpId,
         address childIpId,
         address licensee,
         address licenseTemplate,
-        uint256 licenseId
+        uint256 licenseTermsId
     ) public onlyOwner {
         if (parentIpId == address(0) || childIpId == address(0) || licenseTemplate == address(0)) {
             revert IPDerivativeAgent_InvalidParams();
         }
 
-        bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
         if (!_whitelist[key]) {
-            revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
         }
         _whitelist[key] = false;
-        emit WhitelistedRemoved(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        emit WhitelistedRemoved(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
     }
 
     /// @notice Batch add whitelist entries. Reverts if any entry is invalid or already exists.
@@ -211,16 +209,16 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param childIpIds Array of child/derivative IP addresses
     /// @param licensees Array of licensee addresses (use address(0) for wildcard)
     /// @param licenseTemplates Array of license template addresses
-    /// @param licenseIds Array of license terms IDs
+    /// @param licenseTermsIds Array of license terms IDs
     function addToWhitelistBatch(
         address[] calldata parentIpIds,
         address[] calldata childIpIds,
         address[] calldata licensees,
         address[] calldata licenseTemplates,
-        uint256[] calldata licenseIds
+        uint256[] calldata licenseTermsIds
     ) external onlyOwner {
         uint256 n = parentIpIds.length;
-        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseIds.length != n) {
+        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseTermsIds.length != n) {
             revert IPDerivativeAgent_BatchLengthMismatch();
         }
         for (uint256 i = 0; i < n; ) {
@@ -228,18 +226,18 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
             address childIpId = childIpIds[i];
             address licenseTemplate = licenseTemplates[i];
             address licensee = licensees[i];
-            uint256 licenseId = licenseIds[i];
+            uint256 licenseTermsId = licenseTermsIds[i];
 
             if (parentIpId == address(0) || childIpId == address(0) || licenseTemplate == address(0)) {
                 revert IPDerivativeAgent_InvalidParams();
             }
 
-            bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
             if (_whitelist[key]) {
-                revert IPDerivativeAgent_AlreadyWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+                revert IPDerivativeAgent_AlreadyWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
             }
             _whitelist[key] = true;
-            emit WhitelistedAdded(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            emit WhitelistedAdded(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
 
             unchecked { ++i; }
         }
@@ -252,16 +250,16 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param childIpIds Array of child/derivative IP addresses
     /// @param licensees Array of licensee addresses
     /// @param licenseTemplates Array of license template addresses
-    /// @param licenseIds Array of license terms IDs
+    /// @param licenseTermsIds Array of license terms IDs
     function removeFromWhitelistBatch(
         address[] calldata parentIpIds,
         address[] calldata childIpIds,
         address[] calldata licensees,
         address[] calldata licenseTemplates,
-        uint256[] calldata licenseIds
+        uint256[] calldata licenseTermsIds
     ) external onlyOwner {
         uint256 n = parentIpIds.length;
-        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseIds.length != n) {
+        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseTermsIds.length != n) {
             revert IPDerivativeAgent_BatchLengthMismatch();
         }
         for (uint256 i = 0; i < n; ) {
@@ -269,18 +267,18 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
             address childIpId = childIpIds[i];
             address licenseTemplate = licenseTemplates[i];
             address licensee = licensees[i];
-            uint256 licenseId = licenseIds[i];
+            uint256 licenseTermsId = licenseTermsIds[i];
 
             if (parentIpId == address(0) || childIpId == address(0) || licenseTemplate == address(0)) {
                 revert IPDerivativeAgent_InvalidParams();
             }
 
-            bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            bytes32 key = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
             if (!_whitelist[key]) {
-                revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+                revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
             }
             _whitelist[key] = false;
-            emit WhitelistedRemoved(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+            emit WhitelistedRemoved(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
 
             unchecked { ++i; }
         }
@@ -291,47 +289,47 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param parentIpId Parent IP address
     /// @param childIpId Child/derivative IP address
     /// @param licenseTemplate License template address
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     function addWildcardToWhitelist(
         address parentIpId,
         address childIpId,
         address licenseTemplate,
-        uint256 licenseId
+        uint256 licenseTermsId
     ) external onlyOwner {
-        addToWhitelist(parentIpId, childIpId, address(0), licenseTemplate, licenseId);
+        addToWhitelist(parentIpId, childIpId, address(0), licenseTemplate, licenseTermsId);
     }
 
     /// @notice Convenience function to remove a wildcard whitelist entry
     /// @param parentIpId Parent IP address
     /// @param childIpId Child/derivative IP address
     /// @param licenseTemplate License template address
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     function removeWildcardFromWhitelist(
         address parentIpId,
         address childIpId,
         address licenseTemplate,
-        uint256 licenseId
+        uint256 licenseTermsId
     ) external onlyOwner {
-        removeFromWhitelist(parentIpId, childIpId, address(0), licenseTemplate, licenseId);
+        removeFromWhitelist(parentIpId, childIpId, address(0), licenseTemplate, licenseTermsId);
     }
 
     /// @notice Check if a licensee is whitelisted (exact match or wildcard)
     /// @param parentIpId Parent IP address
     /// @param childIpId Child/derivative IP address
     /// @param licenseTemplate License template address
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     /// @param licensee Licensee address to check
     /// @return True if exact licensee is whitelisted OR wildcard (address(0)) is whitelisted
     function isWhitelisted(
         address parentIpId,
         address childIpId,
         address licenseTemplate,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licensee
     ) public view returns (bool) {
-        bytes32 keyExact = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        bytes32 keyExact = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
         if (_whitelist[keyExact]) return true;
-        bytes32 keyWildcard = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, address(0));
+        bytes32 keyWildcard = _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, address(0));
         return _whitelist[keyWildcard];
     }
 
@@ -339,17 +337,17 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// @param parentIpId Parent IP address
     /// @param childIpId Child/derivative IP address
     /// @param licenseTemplate License template address
-    /// @param licenseId License terms ID
+    /// @param licenseTermsId License terms ID
     /// @param licensee Licensee address
     /// @return The computed whitelist key
     function getWhitelistKey(
         address parentIpId,
         address childIpId,
         address licenseTemplate,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licensee
     ) external pure returns (bytes32) {
-        return _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseId, licensee);
+        return _whitelistKey(parentIpId, childIpId, licenseTemplate, licenseTermsId, licensee);
     }
 
     /// @notice Helper function to return raw whitelist status by key
@@ -390,13 +388,13 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     ///      7. Clean up any remaining allowance
     /// @param childIpId The derivative IP ID (must be non-zero)
     /// @param parentIpId The parent IP ID (must be non-zero)
-    /// @param licenseId The license terms ID in the license template
+    /// @param licenseTermsId The license terms ID in the license template
     /// @param licenseTemplate The license template address (must be non-zero)
     /// @param maxMintingFee Maximum minting fee willing to pay. Use 0 for no limit (per LicensingModule conventions).
     function registerDerivativeViaAgent(
         address childIpId,
         address parentIpId,
-        uint256 licenseId,
+        uint256 licenseTermsId,
         address licenseTemplate,
         uint256 maxMintingFee
     ) external nonReentrant whenNotPaused {
@@ -405,8 +403,8 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         }
 
         // Check whitelist (exact match or wildcard)
-        if (!isWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, msg.sender)) {
-            revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseId, msg.sender);
+        if (!isWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, msg.sender)) {
+            revert IPDerivativeAgent_NotWhitelisted(parentIpId, childIpId, licenseTemplate, licenseTermsId, msg.sender);
         }
 
         bytes memory royaltyContext = "";
@@ -415,7 +413,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         (address currencyToken, uint256 tokenAmount) = LICENSING_MODULE.predictMintingLicenseFee(
             parentIpId,
             licenseTemplate,
-            licenseId,
+            licenseTermsId,
             1,
             msg.sender,
             royaltyContext
@@ -429,8 +427,8 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         // Prepare arrays for LicensingModule call (single parent)
         address[] memory parents = new address[](1);
         parents[0] = parentIpId;
-        uint256[] memory licenseTermsIds = new uint256[](1);
-        licenseTermsIds[0] = licenseId;
+        uint256[] memory licenseTermsIdsArray = new uint256[](1);
+        licenseTermsIdsArray[0] = licenseTermsId;
         uint32 maxRts = 0;
         uint32 maxRevenueShare = 0;
 
@@ -450,7 +448,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
         LICENSING_MODULE.registerDerivative(
             childIpId,
             parents,
-            licenseTermsIds,
+            licenseTermsIdsArray,
             licenseTemplate,
             royaltyContext,
             maxMintingFee,
@@ -471,7 +469,7 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
             msg.sender,
             childIpId,
             parentIpId,
-            licenseId,
+            licenseTermsId,
             licenseTemplate,
             currencyToken,
             tokenAmount,

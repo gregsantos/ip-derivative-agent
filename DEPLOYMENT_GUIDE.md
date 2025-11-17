@@ -243,7 +243,7 @@ export TEST_PARENT=0xParentIPAddress...
 export TEST_CHILD=0xChildIPAddress...
 export TEST_LICENSEE=0xLicenseeAddress...
 export TEST_TEMPLATE=0xLicenseTemplateAddress...
-export TEST_LICENSE_ID=1
+export TEST_LICENSE_TERMS_ID=1
 
 # Add to whitelist (requires owner key)
 cast send $AGENT_OWNER_ADDRESS \
@@ -252,7 +252,7 @@ cast send $AGENT_OWNER_ADDRESS \
   $TEST_CHILD \
   $TEST_LICENSEE \
   $TEST_TEMPLATE \
-  $TEST_LICENSE_ID \
+  $TEST_LICENSE_TERMS_ID \
   --rpc-url story-testnet \
   --private-key $PRIVATE_KEY
 ```
@@ -265,7 +265,7 @@ cast call $AGENT_OWNER_ADDRESS \
   $TEST_PARENT \
   $TEST_CHILD \
   $TEST_TEMPLATE \
-  $TEST_LICENSE_ID \
+  $TEST_LICENSE_TERMS_ID \
   $TEST_LICENSEE \
   --rpc-url story-testnet
 ```
@@ -282,7 +282,7 @@ cast call $LICENSING_MODULE \
   "predictMintingLicenseFee(address,address,uint256,uint256,address,bytes)(address,uint256)" \
   $TEST_PARENT \
   $TEST_TEMPLATE \
-  $TEST_LICENSE_ID \
+  $TEST_LICENSE_TERMS_ID \
   1 \
   $TEST_LICENSEE \
   0x \
@@ -301,7 +301,7 @@ cast send $AGENT_OWNER_ADDRESS \
   "registerDerivativeViaAgent(address,address,uint256,address,uint256)" \
   $TEST_CHILD \
   $TEST_PARENT \
-  $TEST_LICENSE_ID \
+  $TEST_LICENSE_TERMS_ID \
   $TEST_TEMPLATE \
   0 \
   --rpc-url story-testnet \

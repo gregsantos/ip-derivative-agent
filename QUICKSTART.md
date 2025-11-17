@@ -80,7 +80,7 @@ cast call $AGENT_OWNER_ADDRESS "owner()(address)" --rpc-url story-testnet
    ```bash
    cast send $AGENT_OWNER_ADDRESS \
      "addToWhitelist(address,address,address,address,uint256)" \
-     $PARENT_IP $CHILD_IP $LICENSEE $TEMPLATE $LICENSE_ID \
+     $PARENT_IP $CHILD_IP $LICENSEE $TEMPLATE $LICENSE_TERMS_ID \
      --rpc-url story-testnet --private-key $PRIVATE_KEY
    ```
 

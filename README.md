@@ -17,7 +17,7 @@ A production-ready smart contract for delegated derivative registration on Story
 
 ## ✨ Features
 
-- **Whitelist Management**: Owner-controlled whitelist for (parentIp, childIp, licenseTemplate, licenseId, licensee) tuples
+- **Whitelist Management**: Owner-controlled whitelist for (parentIp, childIp, licenseTemplate, licenseTermsId, licensee) tuples
 - **Wildcard Support**: Use address(0) as licensee to allow any caller
 - **Automatic Fee Handling**: Pulls ERC-20 minting fees from licensees and manages RoyaltyModule approvals
 - **Security Features**:
@@ -360,7 +360,7 @@ cast send $AGENT_OWNER_ADDRESS \
   $CHILD_IP \
   $LICENSEE \
   $LICENSE_TEMPLATE \
-  $LICENSE_ID \
+  $LICENSE_TERMS_ID \
   --rpc-url https://rpc.testnet.story.foundation \
   --private-key $PRIVATE_KEY
 ```
@@ -373,7 +373,7 @@ cast send $AGENT_OWNER_ADDRESS \
   $PARENT_IP \
   $CHILD_IP \
   $LICENSE_TEMPLATE \
-  $LICENSE_ID \
+  $LICENSE_TERMS_ID \
   --rpc-url https://rpc.testnet.story.foundation \
   --private-key $PRIVATE_KEY
 ```
@@ -386,7 +386,7 @@ cast call $AGENT_OWNER_ADDRESS \
   $PARENT_IP \
   $CHILD_IP \
   $LICENSE_TEMPLATE \
-  $LICENSE_ID \
+  $LICENSE_TERMS_ID \
   $LICENSEE \
   --rpc-url https://rpc.testnet.story.foundation
 ```
@@ -434,7 +434,7 @@ cast call $LICENSING_MODULE \
   "predictMintingLicenseFee(address,address,uint256,uint256,address,bytes)(address,uint256)" \
   $PARENT_IP \
   $LICENSE_TEMPLATE \
-  $LICENSE_ID \
+  $LICENSE_TERMS_ID \
   1 \
   $LICENSEE \
   0x \
@@ -456,7 +456,7 @@ cast send $AGENT_OWNER_ADDRESS \
   "registerDerivativeViaAgent(address,address,uint256,address,uint256)" \
   $CHILD_IP \
   $PARENT_IP \
-  $LICENSE_ID \
+  $LICENSE_TERMS_ID \
   $LICENSE_TEMPLATE \
   0 \
   --rpc-url https://rpc.testnet.story.foundation \
