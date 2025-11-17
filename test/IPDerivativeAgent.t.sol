@@ -414,7 +414,7 @@ contract IPDerivativeAgentTest is Test {
     
     // ========== Emergency Withdraw Tests ==========
     
-    function test_EmergencyWithdraw_ERC20_Success() public {
+    function test_EmergencyWithdraw_Success() public {
         // Send tokens to agent
         token.mint(address(agent), 100 ether);
         
@@ -427,19 +427,12 @@ contract IPDerivativeAgentTest is Test {
         assertEq(token.balanceOf(address(agent)), 0);
     }
     
-    function test_EmergencyWithdraw_Native_Success() public {
-        // Send native tokens to agent
-        vm.deal(address(agent), 10 ether);
-        
-        uint256 ownerBalanceBefore = owner.balance;
-        
+    function test_EmergencyWithdraw_RevertIf_ZeroToken() public {
         vm.startPrank(owner);
         agent.pause();
+        vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
         agent.emergencyWithdraw(address(0), owner, 10 ether);
         vm.stopPrank();
-        
-        assertEq(owner.balance, ownerBalanceBefore + 10 ether);
-        assertEq(address(agent).balance, 0);
     }
     
     function test_EmergencyWithdraw_RevertIf_NotPaused() public {

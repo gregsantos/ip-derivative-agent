@@ -446,34 +446,20 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     /// Emergency Recovery
     /// -----------------------------------------------------------------------
 
-    /// @notice Emergency withdraw of stuck funds. Only callable by owner while paused.
+    /// @notice Emergency withdraw of stuck ERC20 tokens. Only callable by owner while paused.
     /// @dev This function is only available when the contract is paused to prevent accidental
     ///      withdrawal during normal operations. Use pause() first, then call this function.
-    /// @param token Token address (address(0) for native ETH/IP)
+    /// @dev Native tokens are not supported as the protocol only uses ERC20 tokens for payments.
+    /// @param token ERC20 token address (must be non-zero)
     /// @param to Destination address (must be non-zero and not this contract)
-    /// @param amount Amount to transfer (in wei for native, or token smallest unit)
+    /// @param amount Amount to transfer (in token's smallest unit)
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyOwner whenPaused nonReentrant {
-        if (to == address(0) || to == address(this)) revert IPDerivativeAgent_InvalidParams();
-        
-        if (token == address(0)) {
-            // Withdraw native token (ETH/IP)
-            (bool success, ) = payable(to).call{value: amount}("");
-            if (!success) revert IPDerivativeAgent_EmergencyWithdrawFailed();
-        } else {
-            // Withdraw ERC20 token
-            IERC20(token).safeTransfer(to, amount);
+        if (token == address(0) || to == address(0) || to == address(this)) {
+            revert IPDerivativeAgent_InvalidParams();
         }
+        
+        IERC20(token).safeTransfer(to, amount);
         
         emit EmergencyWithdraw(token, to, amount, block.timestamp);
     }
-
-    /// -----------------------------------------------------------------------
-    /// Receive / Fallback (Accept incoming tokens)
-    /// -----------------------------------------------------------------------
-
-    /// @notice Allow contract to receive native tokens
-    receive() external payable {}
-
-    /// @notice Allow contract to receive calls with data
-    fallback() external payable {}
 }
