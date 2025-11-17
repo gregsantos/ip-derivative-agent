@@ -1,0 +1,32 @@
+# Compiler files
+cache/
+out/
+broadcast/
+
+# Environment variables
+.env
+
+# Dependencies
+lib/
+
+# Foundry cache
+cache_hardhat/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deployment artifacts
+deployment.txt
+*.log
+
+# Node (if using any JS tools)
+node_modules/
+package-lock.json
+yarn.lock
