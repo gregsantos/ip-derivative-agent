@@ -138,6 +138,15 @@ contract IPDerivativeAgentTest is Test {
         assertFalse(agent.isWhitelisted(parentIp, childIp, licenseTemplate, licenseTermsId, licensee));
     }
     
+    function test_RemoveFromWhitelist_RevertIf_ZeroLicenseTermsId() public {
+        vm.startPrank(owner);
+        agent.addToWhitelist(parentIp, childIp, licensee, licenseTemplate, licenseTermsId);
+        
+        vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
+        agent.removeFromWhitelist(parentIp, childIp, licensee, licenseTemplate, 0);
+        vm.stopPrank();
+    }
+    
     function test_BatchAddToWhitelist_Success() public {
         address[] memory parentIps = new address[](2);
         address[] memory childIps = new address[](2);
@@ -173,6 +182,89 @@ contract IPDerivativeAgentTest is Test {
         vm.prank(owner);
         vm.expectRevert(IPDerivativeAgent_BatchLengthMismatch.selector);
         agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+    }
+    
+    function test_BatchAddToWhitelist_RevertIf_ZeroLicenseTermsId() public {
+        address[] memory parentIps = new address[](2);
+        address[] memory childIps = new address[](2);
+        address[] memory licensees = new address[](2);
+        address[] memory licenseTemplates = new address[](2);
+        uint256[] memory licenseTermsIds = new uint256[](2);
+        
+        parentIps[0] = parentIp;
+        parentIps[1] = address(0x10);
+        childIps[0] = childIp;
+        childIps[1] = address(0x11);
+        licensees[0] = licensee;
+        licensees[1] = address(0x12);
+        licenseTemplates[0] = licenseTemplate;
+        licenseTemplates[1] = address(0x13);
+        licenseTermsIds[0] = 1;
+        licenseTermsIds[1] = 0; // Zero license terms ID
+        
+        vm.prank(owner);
+        vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
+        agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+    }
+    
+    function test_BatchRemoveFromWhitelist_Success() public {
+        address[] memory parentIps = new address[](2);
+        address[] memory childIps = new address[](2);
+        address[] memory licensees = new address[](2);
+        address[] memory licenseTemplates = new address[](2);
+        uint256[] memory licenseTermsIds = new uint256[](2);
+        
+        parentIps[0] = parentIp;
+        parentIps[1] = address(0x10);
+        childIps[0] = childIp;
+        childIps[1] = address(0x11);
+        licensees[0] = licensee;
+        licensees[1] = address(0x12);
+        licenseTemplates[0] = licenseTemplate;
+        licenseTemplates[1] = address(0x13);
+        licenseTermsIds[0] = 1;
+        licenseTermsIds[1] = 2;
+        
+        vm.startPrank(owner);
+        // Add entries first
+        agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+        
+        // Remove entries
+        agent.removeFromWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+        vm.stopPrank();
+        
+        // Verify removed
+        assertFalse(agent.isWhitelisted(parentIps[0], childIps[0], licenseTemplates[0], licenseTermsIds[0], licensees[0]));
+        assertFalse(agent.isWhitelisted(parentIps[1], childIps[1], licenseTemplates[1], licenseTermsIds[1], licensees[1]));
+    }
+    
+    function test_BatchRemoveFromWhitelist_RevertIf_ZeroLicenseTermsId() public {
+        address[] memory parentIps = new address[](2);
+        address[] memory childIps = new address[](2);
+        address[] memory licensees = new address[](2);
+        address[] memory licenseTemplates = new address[](2);
+        uint256[] memory licenseTermsIds = new uint256[](2);
+        
+        parentIps[0] = parentIp;
+        parentIps[1] = address(0x10);
+        childIps[0] = childIp;
+        childIps[1] = address(0x11);
+        licensees[0] = licensee;
+        licensees[1] = address(0x12);
+        licenseTemplates[0] = licenseTemplate;
+        licenseTemplates[1] = address(0x13);
+        licenseTermsIds[0] = 1;
+        licenseTermsIds[1] = 2;
+        
+        vm.startPrank(owner);
+        // Add entries first
+        agent.addToWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+        
+        // Try to remove with zero license terms ID
+        licenseTermsIds[1] = 0;
+        vm.expectRevert(IPDerivativeAgent_InvalidParams.selector);
+        agent.removeFromWhitelistBatch(parentIps, childIps, licensees, licenseTemplates, licenseTermsIds);
+        vm.stopPrank();
     }
     
     // ========== Registration Tests ==========
