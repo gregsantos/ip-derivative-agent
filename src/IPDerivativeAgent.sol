@@ -58,12 +58,25 @@ interface ILicensingModule {
     ) external view returns (address currencyToken, uint256 tokenAmount);
 }
 
+/// @notice Struct to group whitelist parameters for safer batch operations
+/// @param parentIpId Parent IP address (must be non-zero)
+/// @param childIpId Child/derivative IP address (must be non-zero)
+/// @param licensee Specific licensee address, or address(0) for wildcard
+/// @param licenseTemplate License template address (must be non-zero)
+/// @param licenseTermsId License terms ID (must be non-zero)
+struct WhitelistEntry {
+    address parentIpId;
+    address childIpId;
+    address licensee;
+    address licenseTemplate;
+    uint256 licenseTermsId;
+}
+
 /// @dev Custom errors for gas-efficient reverts
 error IPDerivativeAgent_ZeroAddress();
 error IPDerivativeAgent_AlreadyWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseTermsId, address licensee);
 error IPDerivativeAgent_NotWhitelisted(address parentIpId, address childIpId, address licenseTemplate, uint256 licenseTermsId, address licensee);
 error IPDerivativeAgent_InvalidParams();
-error IPDerivativeAgent_BatchLengthMismatch();
 error IPDerivativeAgent_FeeTooHigh(uint256 required, uint256 maxAllowed);
 error IPDerivativeAgent_EmergencyWithdrawFailed();
 
@@ -204,30 +217,18 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     }
 
     /// @notice Batch add whitelist entries. Reverts if any entry is invalid or already exists.
-    /// @dev All arrays must have the same length. Reuses addToWhitelist for each entry.
-    /// @param parentIpIds Array of parent IP addresses
-    /// @param childIpIds Array of child/derivative IP addresses
-    /// @param licensees Array of licensee addresses (use address(0) for wildcard)
-    /// @param licenseTemplates Array of license template addresses
-    /// @param licenseTermsIds Array of license terms IDs
-    function addToWhitelistBatch(
-        address[] calldata parentIpIds,
-        address[] calldata childIpIds,
-        address[] calldata licensees,
-        address[] calldata licenseTemplates,
-        uint256[] calldata licenseTermsIds
-    ) external onlyOwner {
-        uint256 n = parentIpIds.length;
-        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseTermsIds.length != n) {
-            revert IPDerivativeAgent_BatchLengthMismatch();
-        }
+    /// @dev Uses WhitelistEntry struct to ensure parameter grouping is correct. Reuses addToWhitelist for each entry.
+    /// @param entries Array of WhitelistEntry structs containing whitelist parameters
+    function addToWhitelistBatch(WhitelistEntry[] calldata entries) external onlyOwner {
+        uint256 n = entries.length;
         for (uint256 i = 0; i < n; ) {
+            WhitelistEntry calldata entry = entries[i];
             addToWhitelist(
-                parentIpIds[i],
-                childIpIds[i],
-                licensees[i],
-                licenseTemplates[i],
-                licenseTermsIds[i]
+                entry.parentIpId,
+                entry.childIpId,
+                entry.licensee,
+                entry.licenseTemplate,
+                entry.licenseTermsId
             );
             unchecked { ++i; }
         }
@@ -235,30 +236,18 @@ contract IPDerivativeAgent is Ownable, Pausable, ReentrancyGuard {
     }
 
     /// @notice Batch remove whitelist entries. Reverts if any entry doesn't exist.
-    /// @dev All arrays must have the same length. Reuses removeFromWhitelist for each entry.
-    /// @param parentIpIds Array of parent IP addresses
-    /// @param childIpIds Array of child/derivative IP addresses
-    /// @param licensees Array of licensee addresses
-    /// @param licenseTemplates Array of license template addresses
-    /// @param licenseTermsIds Array of license terms IDs
-    function removeFromWhitelistBatch(
-        address[] calldata parentIpIds,
-        address[] calldata childIpIds,
-        address[] calldata licensees,
-        address[] calldata licenseTemplates,
-        uint256[] calldata licenseTermsIds
-    ) external onlyOwner {
-        uint256 n = parentIpIds.length;
-        if (childIpIds.length != n || licensees.length != n || licenseTemplates.length != n || licenseTermsIds.length != n) {
-            revert IPDerivativeAgent_BatchLengthMismatch();
-        }
+    /// @dev Uses WhitelistEntry struct to ensure parameter grouping is correct. Reuses removeFromWhitelist for each entry.
+    /// @param entries Array of WhitelistEntry structs containing whitelist parameters
+    function removeFromWhitelistBatch(WhitelistEntry[] calldata entries) external onlyOwner {
+        uint256 n = entries.length;
         for (uint256 i = 0; i < n; ) {
+            WhitelistEntry calldata entry = entries[i];
             removeFromWhitelist(
-                parentIpIds[i],
-                childIpIds[i],
-                licensees[i],
-                licenseTemplates[i],
-                licenseTermsIds[i]
+                entry.parentIpId,
+                entry.childIpId,
+                entry.licensee,
+                entry.licenseTemplate,
+                entry.licenseTermsId
             );
             unchecked { ++i; }
         }
